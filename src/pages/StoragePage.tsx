@@ -1,14 +1,35 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Database, Trash2, HardDrive } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Film } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
 
 export function StoragePage() {
     const navigate = useNavigate();
+    const { user } = useAuthStore();
+    const [sentMedia, setSentMedia] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const storageItems = [
-        { id: 'media', label: 'Media', size: '1.2 GB', icon: <HardDrive size={20} /> },
-        { id: 'files', label: 'Documents', size: '450 MB', icon: <HardDrive size={20} /> },
-        { id: 'cache', label: 'Cache', size: '120 MB', icon: <Database size={20} /> },
-    ];
+    useEffect(() => {
+        const fetchSentMedia = async () => {
+            if (!user) return;
+            setIsLoading(true);
+
+            const { data } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('sender_id', user.id)
+                .not('media_url', 'is', null)
+                .order('created_at', { ascending: false });
+
+            if (data) {
+                setSentMedia(data);
+            }
+            setIsLoading(false);
+        };
+
+        fetchSentMedia();
+    }, [user?.id]);
 
     return (
         <div className="page">
@@ -22,65 +43,83 @@ export function StoragePage() {
             <div className="content p-4">
                 <div className="storage-overview card mb-6 p-4">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="font-semibold">Used Storage</span>
-                        <span className="text-muted">1.77 GB / 5 GB</span>
-                    </div>
-                    <div className="progress-bar w-full h-2 bg-secondary rounded-full overflow-hidden">
-                        <div className="progress-fill h-full bg-primary" style={{ width: '35.4%' }} />
+                        <span className="font-semibold">Sent Media</span>
+                        <span className="text-muted">{sentMedia.length} items</span>
                     </div>
                 </div>
 
-                <div className="settings-group">
-                    {storageItems.map((item) => (
-                        <div key={item.id} className="settings-item">
-                            <div className="settings-icon">{item.icon}</div>
-                            <div className="flex-1">
-                                <span className="block font-medium">{item.label}</span>
-                                <span className="text-sm text-muted">{item.size}</span>
+                {isLoading ? (
+                    <div className="flex justify-center p-8">
+                        <span className="spinner" />
+                    </div>
+                ) : (
+                    <div className="media-gallery">
+                        {sentMedia.length > 0 ? (
+                            sentMedia.map((item) => (
+                                <div key={item.id} className="gallery-item">
+                                    {item.media_type === 'video' ? (
+                                        <div className="gallery-video">
+                                            <video src={item.media_url} />
+                                            <div className="video-icon"><Film size={16} /></div>
+                                        </div>
+                                    ) : (
+                                        <img src={item.media_url} alt="" loading="lazy" onClick={() => window.open(item.media_url, '_blank')} />
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center p-12 text-muted bg-primary rounded-xl border border-dashed border-color">
+                                <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
+                                <p>No sent media found</p>
                             </div>
-                            <button className="btn btn-ghost text-error">
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="mt-8">
-                    <button className="btn btn-primary w-full">
-                        Clear All Data
-                    </button>
-                    <p className="text-center text-xs text-muted mt-4">
-                        Clearing data will remove local copies of media and files.
-                    </p>
-                </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <style>{`
+                .media-gallery {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 0.5rem;
+                }
+                .gallery-item {
+                    aspect-ratio: 1;
+                    border-radius: var(--radius-md);
+                    overflow: hidden;
+                    background: var(--bg-secondary);
+                    position: relative;
+                }
+                .gallery-item img, .gallery-item video {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                }
+                .gallery-item img:hover {
+                    transform: scale(1.05);
+                }
+                .gallery-video {
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
+                }
+                .video-icon {
+                    position: absolute;
+                    top: 0.25rem;
+                    right: 0.25rem;
+                    background: rgba(0,0,0,0.5);
+                    color: white;
+                    padding: 0.25rem;
+                    border-radius: var(--radius-sm);
+                    display: flex;
+                    pointer-events: none;
+                }
                 .card {
                     background: var(--bg-primary);
                     border: 1px solid var(--border-color);
                     border-radius: var(--radius-lg);
-                }
-                .settings-group {
-                    background: var(--bg-primary);
-                    border-radius: var(--radius-lg);
-                    border: 1px solid var(--border-color);
-                    overflow: hidden;
-                }
-                .settings-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    padding: 1rem;
-                    border-bottom: 1px solid var(--border-color);
-                }
-                .settings-item:last-child {
-                    border-bottom: none;
-                }
-                .settings-icon {
-                    color: var(--primary-color);
-                    display: flex;
-                    align-items: center;
                 }
             `}</style>
         </div>

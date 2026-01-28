@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send, Smile, MoreVertical, X, Phone, Check, Paperclip, Info } from 'lucide-react';
+import { ArrowLeft, Send, Smile, MoreVertical, X, Phone, Paperclip, Info } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { useRealtimeMessages, useTypingIndicator, useRealtimeUserStatus } from '../hooks/useRealtime';
@@ -18,8 +18,6 @@ export function ChatPage() {
         sendMessage,
         markAsRead,
         isLoading,
-        acceptChatRequest,
-        rejectChatRequest,
         setActiveConversation,
         blockUser,
         unblockUser
@@ -180,8 +178,6 @@ export function ChatPage() {
     const getInitials = (name: string) => name.slice(0, 2).toUpperCase();
 
     const otherUser = activeConversation?.other_user;
-    const isPending = activeConversation?.status === 'pending';
-    const isInitiator = activeConversation?.creator_id === user?.id;
 
     if (!activeConversation && isLoading) {
         return (
@@ -235,29 +231,6 @@ export function ChatPage() {
 
             {/* Content Area */}
             <div className="messages-container">
-                {isPending && !isInitiator && (
-                    <div className="chat-request-prompt fade-in">
-                        <div className="request-card">
-                            <h3>Chat Request</h3>
-                            <p>{otherUser?.username} wants to chat with you.</p>
-                            <div className="request-actions">
-                                <button className="btn btn-primary" onClick={() => acceptChatRequest(conversationId!)}>
-                                    <Check size={18} /> Accept
-                                </button>
-                                <button className="btn btn-secondary" onClick={() => rejectChatRequest(conversationId!)}>
-                                    <X size={18} /> Decline
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {isPending && isInitiator && (
-                    <div className="chat-request-status">
-                        Waiting for {otherUser?.username} to accept your request...
-                    </div>
-                )}
-
                 {messages.map((message, index) => {
                     const isOwn = message.sender_id === user?.id;
                     const showDate = index === 0 ||
@@ -316,52 +289,51 @@ export function ChatPage() {
             )}
 
             {/* Input Area */}
-            {!isPending && (
-                <div className="message-input-container">
-                    <button className="btn btn-ghost btn-icon" onClick={() => mediaInputRef.current?.click()}>
-                        <Paperclip size={22} />
-                    </button>
-                    <input
-                        type="file"
-                        ref={mediaInputRef}
-                        style={{ display: 'none' }}
-                        accept="image/*,video/*"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            handleMediaUpload(e, file.type.startsWith('video/') ? 'video' : 'image');
-                        }}
-                    />
+            <div className="message-input-container">
+                <button className="btn btn-ghost btn-icon" onClick={() => mediaInputRef.current?.click()}>
+                    <Paperclip size={22} />
+                </button>
+                <input
+                    type="file"
+                    ref={mediaInputRef}
+                    style={{ display: 'none' }}
+                    accept="image/*,video/*"
+                    onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        handleMediaUpload(e, file.type.startsWith('video/') ? 'video' : 'image');
+                    }}
+                />
 
-                    <textarea
-                        ref={textareaRef}
-                        className="message-input input"
-                        placeholder={isBlockedByMe ? "You have blocked this user" : amIBlocked ? "You are blocked" : "Type a message..."}
-                        value={messageText}
-                        onChange={(e) => {
-                            setMessageText(e.target.value);
-                            sendTyping();
-                            e.target.style.height = 'auto';
-                            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                        }}
-                        onKeyDown={handleKeyDown}
-                        rows={1}
-                        disabled={isUploading || isBlockedByMe || amIBlocked}
-                    />
+                <textarea
+                    ref={textareaRef}
+                    className="message-input input"
+                    placeholder={isBlockedByMe ? "You have blocked this user" : amIBlocked ? "You are blocked" : "Type a message..."}
+                    value={messageText}
+                    onChange={(e) => {
+                        setMessageText(e.target.value);
+                        sendTyping();
+                        e.target.style.height = 'auto';
+                        e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                    }}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    disabled={isUploading || isBlockedByMe || amIBlocked}
+                />
 
-                    <button className="btn btn-ghost btn-icon" disabled={isBlockedByMe || amIBlocked}>
-                        <Smile size={22} />
-                    </button>
+                <button className="btn btn-ghost btn-icon" disabled={isBlockedByMe || amIBlocked}>
+                    <Smile size={22} />
+                </button>
 
-                    <button
-                        className="btn btn-primary btn-icon"
-                        onClick={handleSend}
-                        disabled={(!messageText.trim() && !pendingMedia) || isSending || isUploading || isBlockedByMe || amIBlocked}
-                    >
-                        {isUploading || isSending ? <span className="spinner spinner-sm" /> : <Send size={20} />}
-                    </button>
-                </div>
-            )}
+                <button
+                    className="btn btn-primary btn-icon"
+                    onClick={handleSend}
+                    disabled={(!messageText.trim() && !pendingMedia) || isSending || isUploading || isBlockedByMe || amIBlocked}
+                >
+                    {isUploading || isSending ? <span className="spinner spinner-sm" /> : <Send size={20} />}
+                </button>
+            </div>
+
 
             {/* Profile Modal */}
             {showProfile && otherUser && (
@@ -401,8 +373,8 @@ export function ChatPage() {
             )}
 
             <style>{`
-                .chat-page { display: flex; flex-direction: column; height: 100vh; background: var(--bg-secondary); }
-                .chat-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); }
+                .chat-page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: var(--bg-secondary); }
+                .chat-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; }
                 .chat-header-user { flex: 1; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; }
                 .chat-header-info { display: flex; flex-direction: column; }
                 .chat-header-name { font-weight: 600; color: var(--text-primary); }
@@ -411,40 +383,56 @@ export function ChatPage() {
                 
                 .messages-container { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
                 .message-date { text-align: center; font-size: 0.75rem; color: var(--text-muted); margin: 1rem 0; }
-                .message { display: flex; flex-direction: column; }
+                .message { display: flex; flex-direction: column; max-width: 100%; transition: all 0.3s ease; }
                 .message.sent { align-items: flex-end; }
                 .message.received { align-items: flex-start; }
-                .message-bubble { max-width: 80%; padding: 0.75rem 1rem; border-radius: 1rem; position: relative; }
+                .message-bubble { max-width: 80%; padding: 0.75rem 1rem; border-radius: 1rem; position: relative; box-shadow: var(--shadow-sm); }
                 .sent .message-bubble { background: var(--primary-color); color: white; border-bottom-right-radius: 0.25rem; }
                 .received .message-bubble { background: var(--bg-primary); color: var(--text-primary); border-bottom-left-radius: 0.25rem; }
                 
-                .message-text { word-break: break-all; }
+                .message-text { word-break: break-all; font-size: 0.95rem; }
                 .message-time { font-size: 0.65rem; opacity: 0.7; margin-top: 0.25rem; display: block; text-align: right; }
-                .message-media { margin-bottom: 0.5rem; border-radius: 0.5rem; overflow: hidden; }
-                .message-media img { max-width: 100%; display: block; border-radius: 0.5rem; }
+                .message-media { margin-bottom: 0.5rem; border-radius: 0.75rem; overflow: hidden; }
+                .message-media img { max-width: 100%; display: block; border-radius: 0.75rem; transition: transform 0.3s; }
+                .message-media img:hover { transform: scale(1.02); }
                 .video-player { max-width: 250px; }
-                .video-player video { width: 100%; border-radius: 0.5rem; }
+                .video-player video { width: 100%; border-radius: 0.75rem; }
 
-                .chat-request-prompt { position: sticky; top: 0; z-index: 50; display: flex; justify-content: center; margin-bottom: 1rem; }
-                .request-card { background: var(--bg-primary); padding: 1.5rem; border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); text-align: center; max-width: 300px; }
-                .request-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
-                .chat-request-status { padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.875rem; background: rgba(0,0,0,0.05); border-radius: var(--radius-lg); margin-bottom: 1rem; }
-
-                .message-input-container { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--bg-primary); border-top: 1px solid var(--border-color); }
-                .message-input { flex: 1; min-height: 40px; max-height: 120px; padding: 0.6rem 1rem; border-radius: 1.25rem; border: 1px solid var(--border-color); background: var(--bg-secondary); }
+                .message-input-container { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--bg-primary); border-top: 1px solid var(--border-color); padding-bottom: calc(0.75rem + var(--safe-area-bottom)); }
+                .message-input { flex: 1; min-height: 44px; max-height: 120px; padding: 0.75rem 1.25rem; border-radius: var(--radius-xl); border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 1rem; transition: border-color 0.2s; }
+                .message-input:focus { border-color: var(--primary-color); outline: none; }
                 
-                .menu-dropdown { position: absolute; top: 100%; right: 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 100; min-width: 160px; overflow: hidden; margin-top: 0.5rem; }
-                .menu-dropdown button { width: 100%; padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.5rem; border: none; background: none; color: var(--text-primary); cursor: pointer; text-align: left; transition: background 0.2s; }
+                .menu-dropdown { position: absolute; top: 100%; right: 0; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 100; min-width: 180px; overflow: hidden; margin-top: 0.5rem; animation: slideDown 0.2s ease; }
+                .menu-dropdown button { width: 100%; padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem; border: none; background: none; color: var(--text-primary); cursor: pointer; text-align: left; transition: background 0.2s; font-size: 0.9rem; }
                 .menu-dropdown button:hover { background: var(--bg-secondary); }
 
-                .chat-loading { height: 100vh; display: flex; align-items: center; justify-content: center; }
+                @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-                .media-preview-container { padding: 0.5rem 1rem; background: var(--bg-primary); border-top: 1px solid var(--border-color); position: relative; }
-                .media-preview-card { position: relative; width: 100px; height: 100px; border-radius: var(--radius-md); overflow: hidden; border: 2px solid var(--primary-color); }
+                .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; animation: fadeIn 0.3s ease; }
+                .profile-modal { background: var(--bg-primary); width: 100%; max-width: 360px; border-radius: var(--radius-xl); overflow: hidden; position: relative; animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+                .close-btn { position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-primary); z-index: 10; transition: background 0.2s; }
+                .close-btn:hover { background: rgba(0,0,0,0.2); }
+                
+                .profile-header { padding: 3rem 2rem 2rem; text-align: center; background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-primary)); border-bottom: 1px solid var(--border-color); }
+                .profile-header h2 { margin-top: 1rem; font-size: 1.5rem; color: var(--text-primary); }
+                .profile-header p { font-size: 0.875rem; }
+                .avatar-xl { width: 120px; height: 120px; border-radius: 3.5rem; font-size: 3rem; box-shadow: var(--shadow-md); margin: 0 auto; object-fit: cover; }
+                
+                .profile-details { padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+                .detail-item label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.25rem; font-weight: 600; }
+                .detail-item p { font-size: 1rem; color: var(--text-primary); line-height: 1.5; }
+
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+                .media-preview-container { padding: 0.75rem 1rem; background: var(--bg-primary); border-top: 1px solid var(--border-color); position: relative; display: flex; align-items: center; gap: 1rem; }
+                .media-preview-card { position: relative; width: 80px; height: 80px; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow); }
                 .preview-media { width: 100%; height: 100%; object-fit: cover; }
-                .remove-media-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
-                .preview-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(99, 102, 241, 0.8); color: white; font-size: 0.6rem; text-align: center; padding: 2px 0; }
+                .remove-media-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(2px); }
+                .preview-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.4); color: white; font-size: 0.65rem; text-align: center; padding: 2px 0; }
                 .text-error { color: var(--error) !important; }
+                .text-success { color: var(--success) !important; }
+                .spinner-sm { border-width: 2px; }
             `}</style>
         </div>
     );

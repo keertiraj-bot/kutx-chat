@@ -175,7 +175,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
             .insert({
                 type,
                 creator_id: userId, // Explicitly pass creator_id to satisfy RLS
-                status: type === 'direct' ? 'pending' : 'accepted'
+                status: 'accepted'
             })
             .select()
             .single();

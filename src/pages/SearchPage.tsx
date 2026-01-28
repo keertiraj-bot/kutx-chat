@@ -16,36 +16,14 @@ export function SearchPage() {
     const [recentSearches, setRecentSearches] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isCreatingConversation, setIsCreatingConversation] = useState(false);
-    const [acceptedFriendIds, setAcceptedFriendIds] = useState<Set<string>>(new Set());
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Load recent searches and accepted friends
+    // Load recent searches
     useEffect(() => {
         const saved = localStorage.getItem('kutx-recent-searches');
         if (saved) {
             setRecentSearches(JSON.parse(saved));
         }
-
-        const fetchAcceptedFriends = async () => {
-            if (!user) return;
-            const { data } = await supabase
-                .from('conversations')
-                .select('participants(user_id)')
-                .eq('status', 'accepted')
-                .eq('type', 'direct');
-
-            if (data) {
-                const ids = new Set<string>();
-                data.forEach((conv: any) => {
-                    conv.participants.forEach((p: any) => {
-                        if (p.user_id !== user.id) ids.add(p.user_id);
-                    });
-                });
-                setAcceptedFriendIds(ids);
-            }
-        };
-
-        fetchAcceptedFriends();
     }, [user?.id]);
 
     // Search users
@@ -97,17 +75,10 @@ export function SearchPage() {
             localStorage.setItem('kutx-recent-searches', JSON.stringify(updatedRecent));
 
             // Create or get conversation
-            const isFriend = acceptedFriendIds.has(selectedUser.id);
             const conversation = await createConversation(user.id, selectedUser.id);
 
             if (conversation) {
-                if (isFriend) {
-                    navigate(`/chat/${conversation.id}`);
-                } else {
-                    alert(`Chat request sent to ${selectedUser.username}`);
-                    // Refresh friend list to update the UI button
-                    window.location.reload();
-                }
+                navigate(`/chat/${conversation.id}`);
             }
         } catch (error) {
             console.error('Error in handleUserClick:', error);
@@ -198,11 +169,7 @@ export function SearchPage() {
                             </div>
 
                             <div className="user-item-action">
-                                {acceptedFriendIds.has(searchUser.id) ? (
-                                    <button className="btn btn-ghost btn-sm text-primary">Chat</button>
-                                ) : (
-                                    <button className="btn btn-primary btn-sm">Invite</button>
-                                )}
+                                <button className="btn btn-ghost btn-sm text-primary">Chat</button>
                             </div>
 
                             {searchUser.is_online && (
