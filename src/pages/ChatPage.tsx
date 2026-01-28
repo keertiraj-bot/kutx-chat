@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send, Smile, MoreVertical, X, Phone, Check, Paperclip, Info } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -91,7 +91,7 @@ export function ChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleMediaUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const handleMediaUpload = useCallback(async (e: ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
         const file = e.target.files?.[0];
         if (!file || !conversationId || !user) return;
 
@@ -144,7 +144,7 @@ export function ChatPage() {
         setIsSending(false);
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();

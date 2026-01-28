@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
-    User,
     Palette,
     Bell,
     Shield,
@@ -16,7 +15,7 @@ import {
     Monitor,
 } from 'lucide-react';
 import { useAuthStore, useThemeStore } from '../stores/authStore';
-import { supabase, uploadFile } from '../lib/supabase';
+import { uploadFile } from '../lib/supabase';
 
 type SettingsSection = 'main' | 'profile' | 'theme' | 'privacy' | 'notifications';
 
@@ -26,7 +25,7 @@ function ProfileSection({ onBack }: { onBack: () => void }) {
     const [bio, setBio] = useState(user?.bio || '');
     const [isUpdating, setIsUpdating] = useState(false);
 
-    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarUpload = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !user) return;
 
