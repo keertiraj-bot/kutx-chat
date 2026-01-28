@@ -156,25 +156,26 @@ export const useChatStore = create<ChatState>()((set, get) => ({
                 .eq('user_id', otherUserId)
                 .in('conversation_id', conversationIds);
 
-            if (otherParticipations && otherParticipations.length > 0) {
-                // Get the direct conversation if exists
+            const convoIds = otherParticipations?.map(p => p.conversation_id) || [];
+            if (convoIds.length > 0) {
                 const { data: conversation } = await supabase
                     .from('conversations')
                     .select('*')
-                    .in('id', otherParticipations.map(p => p.conversation_id))
+                    .in('id', convoIds)
                     .eq('type', 'direct')
-                    .single();
+                    .maybeSingle();
 
                 if (conversation) return conversation;
             }
         }
 
         // Create new conversation
+        console.log('Inserting new conversation:', { type, creator_id: userId, status: 'accepted' });
         const { data: conversation, error: convError } = await supabase
             .from('conversations')
             .insert({
                 type,
-                creator_id: userId, // Explicitly pass creator_id to satisfy RLS
+                creator_id: userId,
                 status: 'accepted'
             })
             .select()
