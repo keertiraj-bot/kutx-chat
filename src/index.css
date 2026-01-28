@@ -78,12 +78,22 @@
   margin: 0;
   padding: 0;
   caret-color: transparent;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 input,
 textarea,
 [contenteditable="true"] {
   caret-color: auto !important;
+  user-select: text !important;
+}
+
+a,
+button,
+[role="button"],
+.interactive {
+  cursor: pointer;
 }
 
 html {

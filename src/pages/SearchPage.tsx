@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ArrowLeft, X } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -17,6 +17,7 @@ export function SearchPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isCreatingConversation, setIsCreatingConversation] = useState(false);
     const [acceptedFriendIds, setAcceptedFriendIds] = useState<Set<string>>(new Set());
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Load recent searches and accepted friends
     useEffect(() => {
@@ -134,9 +135,10 @@ export function SearchPage() {
                     <ArrowLeft size={24} />
                 </button>
 
-                <div className="search-input-container">
+                <div className="search-input-container" onClick={() => searchInputRef.current?.focus()}>
                     <Search size={20} className="search-icon" />
                     <input
+                        ref={searchInputRef}
                         type="text"
                         className="search-input"
                         placeholder="Search by username..."
@@ -229,6 +231,7 @@ export function SearchPage() {
           background: var(--bg-secondary);
           border-radius: var(--radius-full);
           padding: 0 1rem;
+          cursor: text;
         }
 
         .search-icon {

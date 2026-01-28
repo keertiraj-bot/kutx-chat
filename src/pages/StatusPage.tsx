@@ -326,32 +326,39 @@ function StatusViewerModal({
 
     // Handle view count update
     useEffect(() => {
+        const viewedStatusIds = new Set<string>();
+
         const markAsViewed = async () => {
-            if (currentStatus && user.id !== currentUser?.id) {
-                await supabase.rpc('increment_status_view', { status_id: currentStatus.id });
+            if (currentStatus && user.id !== currentUser?.id && !viewedStatusIds.has(currentStatus.id)) {
+                viewedStatusIds.add(currentStatus.id);
+                // Call RPC to increment count and record view
+                await supabase.rpc('increment_status_view', {
+                    status_id: currentStatus.id,
+                    viewer_id: user.id
+                });
             }
         };
         markAsViewed();
-    }, [currentStatus, user.id, currentUser?.id]);
+    }, [currentStatus?.id, user.id, currentUser?.id]);
 
     // Fetch viewers if it's our own status
     useEffect(() => {
         const fetchViewers = async () => {
             if (currentStatus && user.id === currentUser?.id) {
-                const { data } = await supabase
+                const { data, error } = await supabase
                     .from('status_views')
                     .select('*, user:users(*)')
                     .eq('status_id', currentStatus.id)
                     .order('viewed_at', { ascending: false });
 
-                if (data) {
+                if (data && !error) {
                     const uniqueViewersMap = new Map();
                     data.forEach(v => {
                         const viewerData = v.user;
                         if (viewerData && !uniqueViewersMap.has(viewerData.id)) {
                             uniqueViewersMap.set(viewerData.id, {
                                 ...viewerData,
-                                viewed_at: v.viewed_at
+                                viewed_at: v.viewed_at || v.created_at // Fallback to created_at if viewed_at missing
                             });
                         }
                     });
@@ -360,7 +367,7 @@ function StatusViewerModal({
             }
         };
         fetchViewers();
-    }, [currentStatus, user.id, currentUser?.id]);
+    }, [currentStatus?.id, user.id, currentUser?.id]);
 
     return (
         <div className="status-viewer-overlay" onClick={onClose}>
